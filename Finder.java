@@ -17,7 +17,14 @@ public class Finder {
 
 			Element nameCell = tds.get(1);
 			Element nameLink = nameCell.select("a[class=\"dropdown-toggle\"]").get(0);
-			System.out.println(nameLink.text());
+			System.out.println("name: " + nameLink.text());
+
+			Element classesCell = tds.get(2);
+			Elements classes = classesCell.select("i[class^=\"classicon\"");
+
+			for (Element currClass: classes) {
+				System.out.println("\t" + currClass.className());
+			}
         }
 	}
 }
