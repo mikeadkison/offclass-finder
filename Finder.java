@@ -21,7 +21,24 @@ public class Finder {
 		OFFCLASSES.add("spy");
 		OFFCLASSES.add("engineer");
 
-		Document doc = Jsoup.connect("http://logs.tf/1240238").get();
+		Document mainPage = Jsoup.connect("http://logs.tf").get();
+		Element logsTableBody = mainPage.select("tbody").first();
+		for (Element row: logsTableBody.select("tr")) {
+			Element logLink = row.select("a").first();
+			String logName = logLink.text();
+			String urlEnding = logLink.attr("href");
+			String url = "http://logs.tf" + urlEnding;
+
+			if (logName.contains("TF2Center")) {
+				analyzeLog(url);
+			}
+			
+		}
+	}
+
+
+	private static void analyzeLog(String url) throws IOException {
+		Document doc = Jsoup.connect(url).get();
 		Element playerTable = doc.select("table[id=\"players\"]").get(0).select("tbody").first();
 		//System.out.println(doc.select("i[class^=\"classicon\"]").size());
 		for (Element row: playerTable.select("tr")) { //1 row per player
