@@ -36,32 +36,33 @@ public class Finder extends Application {
 	private static final int TIMEOUT = 20 * 1000;
 	private static final int NUM_PAGES = 15; //number of pages on logs.tf to explore for logsddddd
 	private List<PlayerReport> reports;
-	private Set<String> visited;
+	
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
 		Finder finder = new Finder();
 		launch(args);
 	}
 
-	public Finder() {
+	public Finder() throws IOException {
 		OFFCLASSES.add("pyro");
 		OFFCLASSES.add("heavy");
 		OFFCLASSES.add("sniper");
 		OFFCLASSES.add("spy");
 		OFFCLASSES.add("engineer");
 		reports = new ArrayList<>();
-		visited = new LinkedHashSet<>();
-
+		List<String> visited = new ArrayList<>();
+		boolean visitedBool = false;
+		int j = 0;
 		String baseURL = "http://logs.tf/?p=";
 		for (int i = 1; i <= NUM_PAGES; i++) {
 			String logsListURL = baseURL + String.valueOf(i);
 
-			try {
+			//try {
 				Document mainPage = Jsoup.connect(logsListURL).timeout(TIMEOUT).get();
 				Element logsTableBody = mainPage.select("tbody").first();
-				int j = 0;
+				
 				for (Element row: logsTableBody.select("tr")) {
-					System.out.println(j);
+					//System.out.println(j);
 					j++;
 					Element logLink = row.select("a").first();
 					String logName = logLink.text();
@@ -70,19 +71,27 @@ public class Finder extends Application {
 					String gameFormat = row.select("td").get(2).text();
 
 					if (logName.contains("TF2Center") && gameFormat.equals("6v6") && !visited.contains(url)) {
-						if (url.equals("http://logs.tf/1240601")) {
-							System.out.println("http://logs.tf/1240601 IS BEING ANALYZED");
-							System.out.println("VISITED: " + visited);
+						if (url.equals("http://logs.tf/1241016")) {
+							System.out.println("http://logs.tf/1241016 IS BEING ANALYZED");
+							System.out.println("VISITED HAS 1241016: " + visited.contains(url));
+							System.out.println("visited bool: " + visitedBool);
+							visitedBool = true;
 						}
 						visited.add(url);
+						
+						if (url.equals("http://logs.tf/1241016")) {
+							System.out.println("VISITED Now HAS 1241016: " + visited.contains(url));
+						}
 						List<PlayerReport> reports = analyzeLog(url);
 						this.reports.addAll(reports);
 					}
 					
 				}
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+				System.out.println("JAY: " + j);
+			//} catch (IOException e) {
+				//System.out.println("EXCEPTIONI!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+				//e.printStackTrace();
+			//}
 		}
 
 	}
