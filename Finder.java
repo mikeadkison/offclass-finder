@@ -10,6 +10,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Set;
+import java.util.LinkedHashSet;
 
 import javafx.stage.Stage;
 import javafx.scene.Scene;
@@ -31,10 +33,10 @@ import javafx.scene.control.TextArea;
 public class Finder extends Application {
 	private static final List<String> OFFCLASSES = new ArrayList<>(); //list of classes which are considered OFFCLASSES
 	private static final double MAX_OFFCLASS_PERCENT = 40.;
-	private String displayedText;
-	private static final int TIMEOUT = 10 * 1000;
+	private static final int TIMEOUT = 20 * 1000;
 	private static final int NUM_PAGES = 15; //number of pages on logs.tf to explore for logsddddd
 	private List<PlayerReport> reports;
+	private Set<String> visited;
 
 	public static void main(String[] args) {
 		Finder finder = new Finder();
@@ -48,6 +50,7 @@ public class Finder extends Application {
 		OFFCLASSES.add("spy");
 		OFFCLASSES.add("engineer");
 		reports = new ArrayList<>();
+		visited = new LinkedHashSet<>();
 
 		String baseURL = "http://logs.tf/?p=";
 		for (int i = 1; i <= NUM_PAGES; i++) {
@@ -56,14 +59,22 @@ public class Finder extends Application {
 			try {
 				Document mainPage = Jsoup.connect(logsListURL).timeout(TIMEOUT).get();
 				Element logsTableBody = mainPage.select("tbody").first();
+				int j = 0;
 				for (Element row: logsTableBody.select("tr")) {
+					System.out.println(j);
+					j++;
 					Element logLink = row.select("a").first();
 					String logName = logLink.text();
 					String urlEnding = logLink.attr("href");
 					String url = "http://logs.tf" + urlEnding;
 					String gameFormat = row.select("td").get(2).text();
 
-					if (logName.contains("TF2Center") && gameFormat.equals("6v6")) {
+					if (logName.contains("TF2Center") && gameFormat.equals("6v6") && !visited.contains(url)) {
+						if (url.equals("http://logs.tf/1240601")) {
+							System.out.println("http://logs.tf/1240601 IS BEING ANALYZED");
+							System.out.println("VISITED: " + visited);
+						}
+						visited.add(url);
 						List<PlayerReport> reports = analyzeLog(url);
 						this.reports.addAll(reports);
 					}
@@ -120,7 +131,7 @@ public class Finder extends Application {
      * returns empty string if no offclassers, else returns information about the offclassers
      */
 	private List<PlayerReport> analyzeLog(String url) throws IOException {
-		System.out.println("analyzing: " + url);
+		//System.out.println("analyzing: " + url);
 		List<PlayerReport> reports = new ArrayList<>();
 
 		Document doc = Jsoup.connect(url).get();
@@ -136,26 +147,36 @@ public class Finder extends Application {
 			Element classesCell = tds.get(2);
 			Elements classes = classesCell.select("i[class^=\"classicon\"");
 
+
 			int totalSecs = 0;
 			int totalOffclassSecs = 0;
+
+			String[] minsAndSecs = null;
 			for (Element currClass: classes) { //for each class that the player played
+				
 				String timePlayedTableStr = currClass.attr("data-content");
 
 				Document tableDoc = Jsoup.parse(timePlayedTableStr);
 				Element timePlayedTable = tableDoc.select("table").first();
 				String timePlayedStr = timePlayedTable.select("tbody").first().select("tr").first().select("td").first().text();
-				String[] minsAndSecs = timePlayedStr.split(":");
+				
+				minsAndSecs = timePlayedStr.split(":");
 				int timePlayed = Integer.parseInt(minsAndSecs[0]) * 60 + Integer.parseInt(minsAndSecs[1]); //time played by this player on this class in seconds
 				totalSecs += timePlayed;
 
+
+				int i = 0;
 				for (String offclass: OFFCLASSES) {
+
 					if (currClass.className().contains(offclass)) { //the player has played this offclass
 						totalOffclassSecs += timePlayed;
+						i += 1;
+						
 					}
 				}
 			}
 
-			double offclassPercent = Math.floor((double)totalOffclassSecs / totalSecs * 100);
+			double offclassPercent = Math.floor(((double)totalOffclassSecs) / totalSecs * 100);
 
 			
 
@@ -167,9 +188,6 @@ public class Finder extends Application {
 				PlayerReport report = new PlayerReport(nameLink.text(), tf2centerProfile, offclassPercent, url);
 				reports.add(report);
 
-				System.out.println(nameLink.text());
-				System.out.println(totalOffclassSecs);
-				System.out.println(totalSecs);
 			}
         }
 
@@ -192,7 +210,7 @@ public class Finder extends Application {
 		@Override
 		public String toString() {
 			return "name: " + this.name + "\n"
-					+ "offclass percent: " + offclassPercent + "%";
+					+ "offclass percent: " + (int) offclassPercent + "%";
 		}
 	}
 }
