@@ -18,19 +18,36 @@ import javafx.scene.control.ScrollPane;
 import javafx.application.Application;
 import javafx.scene.text.Text;
 
+import javafx.scene.layout.VBox;
+import javafx.scene.control.Hyperlink;
+
+import javafx.application.HostServices;
+import javafx.event.EventHandler;
+import javafx.event.ActionEvent;
+
+import javafx.scene.control.TextArea;
+
+
 public class Finder extends Application {
 	private static final List<String> OFFCLASSES = new ArrayList<>(); //list of classes which are considered OFFCLASSES
 	private static final double MAX_OFFCLASS_PERCENT = 40.;
-	private static String displayedText;
+	private String displayedText;
 	private static final int TIMEOUT = 10 * 1000;
-	private static final int NUM_PAGES = 15; //number of pages on logs.tf to explore for logs
+	private static final int NUM_PAGES = 15; //number of pages on logs.tf to explore for logsddddd
+	private List<PlayerReport> reports;
 
 	public static void main(String[] args) {
+		Finder finder = new Finder();
+		launch(args);
+	}
+
+	public Finder() {
 		OFFCLASSES.add("pyro");
 		OFFCLASSES.add("heavy");
 		OFFCLASSES.add("sniper");
 		OFFCLASSES.add("spy");
 		OFFCLASSES.add("engineer");
+		reports = new ArrayList<>();
 
 		String baseURL = "http://logs.tf/?p=";
 		for (int i = 1; i <= NUM_PAGES; i++) {
@@ -45,12 +62,10 @@ public class Finder extends Application {
 					String urlEnding = logLink.attr("href");
 					String url = "http://logs.tf" + urlEnding;
 					String gameFormat = row.select("td").get(2).text();
+
 					if (logName.contains("TF2Center") && gameFormat.equals("6v6")) {
-						if (analyzeLog(url).length() > 0) {
-							displayedText += url + "\n\n";
-							displayedText += analyzeLog(url) + "---------------------------------------------------------\n";
-						}
-						
+						List<PlayerReport> reports = analyzeLog(url);
+						this.reports.addAll(reports);
 					}
 					
 				}
@@ -59,7 +74,6 @@ public class Finder extends Application {
 			}
 		}
 
-		launch(args);
 	}
 
 	@Override
@@ -67,18 +81,48 @@ public class Finder extends Application {
         primaryStage.setTitle("Hello Brightly!");
         
         ScrollPane root = new ScrollPane();
-        Text textNode = new Text(displayedText);
-        root.setContent(textNode);
+        VBox vbox = new VBox();
+        addReportsToVBox(vbox);
+        root.setContent(vbox);
         primaryStage.setScene(new Scene(root, 700, 700));
         primaryStage.show();
+    }
+
+    private void addReportsToVBox(VBox vbox) {
+    	for (PlayerReport report: reports) {
+    		TextArea infoTextArea= new TextArea(report.toString());
+    		infoTextArea.setPrefRowCount(infoTextArea.getText().split("\\n").length);
+    		infoTextArea.setEditable(false);
+    		vbox.getChildren().add(infoTextArea);
+
+    		Hyperlink tf2centerProfileLink = new Hyperlink(report.tf2centerProfile);
+    		tf2centerProfileLink.setOnAction(new EventHandler<ActionEvent>() {
+                @Override
+                public void handle(ActionEvent e) {
+                    getHostServices().showDocument(report.tf2centerProfile);
+                }
+            });
+    		vbox.getChildren().add(tf2centerProfileLink);
+
+    		Hyperlink lobbyLink = new Hyperlink(report.lobbyURL);
+    		lobbyLink.setOnAction(new EventHandler<ActionEvent>() {
+                @Override
+                public void handle(ActionEvent e) {
+                    getHostServices().showDocument(report.lobbyURL);
+                }
+            });
+            vbox.getChildren().add(lobbyLink);
+    	}
     }
 
 
     /**
      * returns empty string if no offclassers, else returns information about the offclassers
      */
-	private static String analyzeLog(String url) throws IOException {
-		String toReturn = "";
+	private List<PlayerReport> analyzeLog(String url) throws IOException {
+		System.out.println("analyzing: " + url);
+		List<PlayerReport> reports = new ArrayList<>();
+
 		Document doc = Jsoup.connect(url).get();
 		Element playerTable = doc.select("table[id=\"players\"]").get(0).select("tbody").first();
 		//System.out.println(doc.select("i[class^=\"classicon\"]").size());
@@ -116,15 +160,39 @@ public class Finder extends Application {
 			
 
 			if (offclassPercent > MAX_OFFCLASS_PERCENT) {
-				toReturn += "name: " + nameLink.text();
-				toReturn += "\n\t offclass percentage: " + offclassPercent + "%";
+
 				Element linksList = nameCell.select("ul[class=\"dropdown-menu\"]").first();
 				String tf2centerProfile = linksList.select("li").get(5).select("a").first().attr("href");
-				toReturn += "\n\t" + tf2centerProfile;
-				toReturn += "\n";
+
+				PlayerReport report = new PlayerReport(nameLink.text(), tf2centerProfile, offclassPercent, url);
+				reports.add(report);
+
+				System.out.println(nameLink.text());
+				System.out.println(totalOffclassSecs);
+				System.out.println(totalSecs);
 			}
         }
 
-        return toReturn;
+        return reports;
+	}
+
+	private class PlayerReport {
+		String name;
+		String tf2centerProfile;
+		double offclassPercent;
+		String lobbyURL;
+
+		public PlayerReport(String name, String tf2centerProfile, double offclassPercent, String lobbyURL) {
+			this.name = name;
+			this.tf2centerProfile = tf2centerProfile;
+			this.offclassPercent = offclassPercent;
+			this.lobbyURL = lobbyURL;
+		}
+
+		@Override
+		public String toString() {
+			return "name: " + this.name + "\n"
+					+ "offclass percent: " + offclassPercent + "%";
+		}
 	}
 }
