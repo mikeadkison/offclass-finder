@@ -12,14 +12,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 
 public class Finder {
-	private static final List<String> offclasses = new ArrayList<>(); //list of classes which are considered offclasses
-
+	private static final List<String> OFFCLASSES = new ArrayList<>(); //list of classes which are considered OFFCLASSES
+	private static final double MAX_OFFCLASS_PERCENT = 40.;
 	public static void main(String[] args) throws IOException {
-		offclasses.add("pyro");
-		offclasses.add("heavy");
-		offclasses.add("sniper");
-		offclasses.add("spy");
-		offclasses.add("engineer");
+		OFFCLASSES.add("pyro");
+		OFFCLASSES.add("heavy");
+		OFFCLASSES.add("sniper");
+		OFFCLASSES.add("spy");
+		OFFCLASSES.add("engineer");
 
 		Document doc = Jsoup.connect("http://logs.tf/1240238").get();
 		Element playerTable = doc.select("table[id=\"players\"]").get(0).select("tbody").first();
@@ -48,14 +48,22 @@ public class Finder {
 				int timePlayed = Integer.parseInt(minsAndSecs[0]) * 60 + Integer.parseInt(minsAndSecs[1]); //time played by this player on this class in seconds
 				totalSecs += timePlayed;
 
-				for (String offclass: offclasses) {
+				for (String offclass: OFFCLASSES) {
 					if (currClass.className().contains(offclass)) { //the player has played this offclass
 						totalOffclassSecs += timePlayed;
 					}
 				}
 			}
 
-			System.out.println("\t offclass percentage: " + Math.floor((double)totalOffclassSecs / totalSecs * 100) + "%");
+			double offclassPercent = Math.floor((double)totalOffclassSecs / totalSecs * 100);
+
+			System.out.println("\t offclass percentage: " + offclassPercent + "%");
+
+			if (offclassPercent > MAX_OFFCLASS_PERCENT) {
+				Element linksList = nameCell.select("ul[class=\"dropdown-menu\"]").first();
+				String tf2centerProfile = linksList.select("li").get(5).select("a").first().attr("href");
+				System.out.println("\t" + tf2centerProfile);
+			}
         }
 	}
 }
