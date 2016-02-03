@@ -38,66 +38,54 @@ public class Finder extends Application {
 	private List<PlayerReport> reports;
 	
 
-	public static void main(String[] args) throws IOException {
-		Finder finder = new Finder();
-		launch(args);
-	}
 
-	public Finder() throws IOException {
+	public Finder() {
 		OFFCLASSES.add("pyro");
 		OFFCLASSES.add("heavy");
 		OFFCLASSES.add("sniper");
 		OFFCLASSES.add("spy");
 		OFFCLASSES.add("engineer");
 		reports = new ArrayList<>();
-		List<String> visited = new ArrayList<>();
+		Set<String> visited = new LinkedHashSet<>();
 		boolean visitedBool = false;
-		int j = 0;
 		String baseURL = "http://logs.tf/?p=";
+
 		for (int i = 1; i <= NUM_PAGES; i++) {
 			String logsListURL = baseURL + String.valueOf(i);
 
-			//try {
+			try {
 				Document mainPage = Jsoup.connect(logsListURL).timeout(TIMEOUT).get();
 				Element logsTableBody = mainPage.select("tbody").first();
 				
 				for (Element row: logsTableBody.select("tr")) {
-					//System.out.println(j);
-					j++;
+
 					Element logLink = row.select("a").first();
 					String logName = logLink.text();
 					String urlEnding = logLink.attr("href");
 					String url = "http://logs.tf" + urlEnding;
+					System.out.println("checking log: " + url);
+
 					String gameFormat = row.select("td").get(2).text();
 
 					if (logName.contains("TF2Center") && gameFormat.equals("6v6") && !visited.contains(url)) {
-						if (url.equals("http://logs.tf/1241016")) {
-							System.out.println("http://logs.tf/1241016 IS BEING ANALYZED");
-							System.out.println("VISITED HAS 1241016: " + visited.contains(url));
-							System.out.println("visited bool: " + visitedBool);
-							visitedBool = true;
-						}
 						visited.add(url);
 						
-						if (url.equals("http://logs.tf/1241016")) {
-							System.out.println("VISITED Now HAS 1241016: " + visited.contains(url));
-						}
 						List<PlayerReport> reports = analyzeLog(url);
 						this.reports.addAll(reports);
 					}
 					
 				}
-				System.out.println("JAY: " + j);
-			//} catch (IOException e) {
-				//System.out.println("EXCEPTIONI!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-				//e.printStackTrace();
-			//}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 
 	}
 
 	@Override
     public void start(Stage primaryStage) {
+    	
+
         primaryStage.setTitle("Hello Brightly!");
         
         ScrollPane root = new ScrollPane();
